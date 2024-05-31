@@ -8,7 +8,7 @@ float D = 3;    // Distance between reference points
 float be = 60 * PI / 180; // Beam elevation angle
 float al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
 float si = sqrt(2.5e-40); // Measurement noise standard deviation
-int nIter = 3; // Number of iterations
+int nIter = 100; // Number of iterations
 float T = 0.01; // Time step
 float ka = 1; // Placeholder for constant 'ka'
 float m = 1; // Placeholder for constant 'm'
@@ -92,15 +92,6 @@ void setup() {
     // Initial measurement matrix H0 and initial range measurements r0
     float H0[3][K];
     comp_H0(ka, m, v, p, p0, theta0, H0);
-    //Print out the initial measurement matrix
-    Serial.println("Initial measurement matrix H0: ");
-    for (int k = 0; k < K; k++) {
-        for (int l = 0; l < 3; l++) {
-            Serial.print(H0[l][k]);
-            Serial.print(" ");
-        }
-        Serial.println();
-    }
 
     float r0[3*K];
 
@@ -136,46 +127,11 @@ void setup() {
             r[i] = r0[i] + si * random(1000)/1000.0;
         }
 
-        //Print out the simulated measurement
-        Serial.print("Simulated measurement at iteration ");
-        Serial.print(n);
-        Serial.println(": ");
-        for(int i = 0;i < 3; i++){
-            for(int j = 0; j < K; j++){
-                Serial.print(r[3*j + i]);
-                Serial.print(" ");
-            }
-            Serial.println();
-        }
-        Serial.println();
-
         // State prediction
         state_prediction(A, xp, xm);
 
-        //Print out the state prediction
-        Serial.print("State prediction at iteration ");
-        Serial.print(n);
-        Serial.println(": ");
-        for (int i = 0; i < 6; i++) {
-            Serial.print(xm[i]);
-            Serial.print(" ");
-        }
-        Serial.println();
-
         // Covariance prediction
         cov_prediction(A, Pp, Q, Pm);
-
-        //Print out the covariance prediction
-        Serial.print("Covariance prediction at iteration ");
-        Serial.print(n);
-        Serial.println(": ");
-        for (int i = 0; i < 6; i++) {
-            for (int j = 0; j < 6; j++) {
-                Serial.print(Pm[i][j]);
-                Serial.print(" ");
-            }
-            Serial.println();
-        }
 
         // Measurement matrix linearization
         linear_H0(xm[0], xm[2], xm[4], Hl, p, v, h, ka, m);
@@ -191,18 +147,6 @@ void setup() {
             for (int l = 0; l < 3; l++) {
                 rH[3*k + l] = H0[l][k];
             }
-        }
-
-        //Print out the measurement prediction
-        Serial.print("Measurement prediction at iteration ");
-        Serial.print(n);
-        Serial.println(": ");
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < K; j++) {
-                Serial.print(rH[3*j + i]);
-                Serial.print(" ");
-            }
-            Serial.println();
         }
 
         state_update(xm, Kg, r, rH, xp); // State update

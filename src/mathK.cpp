@@ -49,6 +49,7 @@ int sign(float value) {
     }
 }
 
+// Kalman gain
 void kalmanGain(float Hl[3*K][6], float Pm[6][6], float R[3*K][3*K], float res[6][3*K]){
     //Transposition of Hl to HlT
     float HlT[6][3*K];
@@ -103,9 +104,9 @@ void kalmanGain(float Hl[3*K][6], float Pm[6][6], float R[3*K][3*K], float res[6
 
     //Matrix multiplication of Kg_tmp3 and Pm
     for(int i = 0;i < 6;i++){
-        for(int j = 0;j < 6;j++){
+        for(int j = 0;j < 3*K;j++){
             res[i][j] = 0;
-            for(int k = 0;k < 3*K;k++){
+            for(int k = 0;k < 6;k++){
                 res[i][j] += Kg_tmp3[i][k] * Pm[k][j];
             }
         }
@@ -124,10 +125,10 @@ void linear_H0(float x, float y, float theta, float Hl[3*K][6], float p[3][K], f
             Hl[idx][3] = 0;
             Hl[idx][4] = drdtheta(k, l, x, y, theta, p, v, h, ka, m);
             Hl[idx][5] = 0;
+
         }
     }
 }
-
 
 // Partial derivatives of range measurements
 float drdx(int k, int l, float x, float y, float theta, float p[3][K], float v[3][3], float h, float ka, float m) {
@@ -140,9 +141,10 @@ float drdx(int k, int l, float x, float y, float theta, float p[3][K], float v[3
     if (is_out_fov(k, l, x, y, p, v, theta)) {
         return 0;
     } else {
-        return -ka * (m + 1) * pow(h, m) * sign(D) * A / pow(C, (m + 3) / 2)
-            + ka * (m + 1) * (m + 3) * pow(h, m) * fabs(D) * (xk - x) / pow(C, (m + 5) / 2);
+        return -ka * (m + 1) * pow(h, m) * sign(D) * A / pow(C, (m + 3) / 2) + ka * (m + 1) * (m + 3) * pow(h, m) * fabs(D) * (xk - x) / pow(C, (m + 5) / 2);
     }
+
+
 }
 
 // Partial derivatives of range measurements
