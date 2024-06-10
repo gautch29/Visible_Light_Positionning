@@ -1,21 +1,23 @@
-#include <Arduino.h>
 #include <math.h>
+#include <Arduino.h>
 #include "mathK.h"
 
+#define DEBUG
+
 // System parameters
-float h = 2;    // Height of the receiver
-float D = 3;    // Distance between reference points
-float be = 60 * PI / 180; // Beam elevation angle
-float al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
-float si = sqrt(2.5e-40); // Measurement noise standard deviation
+double h = 2;    // Height of the receiver
+double D = 3;    // Distance between reference points
+double be = 60 * PI / 180; // Beam elevation angle
+double al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
+double si = sqrt(2.5e-40); // Measurement noise standard deviation
 int nIter = 100; // Number of iterations
-float T = 0.01; // Time step
-float ka = 1; // Placeholder for constant 'ka'
-float m = 1; // Placeholder for constant 'm'
-float P = 1; // Placeholder for constant 'P'
+double T = 0.01; // Time step
+double ka = 1; // Placeholder for constant 'ka'
+double m = 1; // Placeholder for constant 'm'
+double P = 1; // Placeholder for constant 'P'
 
 // State transition matrix
-float A[6][6] = {
+double A[6][6] = {
     {1, T, 0, 0, 0, 0},
     {0, 1, 0, 0, 0, 0},
     {0, 0, 1, T, 0, 0},
@@ -25,7 +27,7 @@ float A[6][6] = {
 };
 
 // Process and measurement noise covariances
-float Q[6][6] = {
+double Q[6][6] = {
     {0.01, 0, 0, 0, 0, 0},
     {0, 0.01, 0, 0, 0, 0},
     {0, 0, 0.01, 0, 0, 0},
@@ -35,21 +37,22 @@ float Q[6][6] = {
 };
 
 // Measurement noise covariance, initialized later
-float R[3*K][3*K];
+double R[3*K][3*K];
 
 // Reference point positions
-float p[3][K] = {
+double p[3][K] = {
     {-D, 0, D, -D, 0, D, -D, 0, D},
     {D, D, D, 0, 0, 0, -D, -D, -D},
     {h, h, h, h, h, h, h, h, h}
 };
 
 // Placeholder for beam vectors
-float v[3][3];
+double v[3][3];
 
 // Main EKF loop
 void setup() {
     Serial.begin(115200);
+    Serial.println("Starting EKF loop");
 
     // Initialize measurement noise covariance R
     for (int i = 0; i < 3*K; i++) {
@@ -60,17 +63,17 @@ void setup() {
 
     // Generate beam vectors
     for (int l = 0; l < 3; l++) {
-        float tmp[3][3] = {{cos(al[l]), sin(al[l]), 0},
+        double tmp[3][3] = {{cos(al[l]), sin(al[l]), 0},
                            {-sin(al[l]), cos(al[l]), 0},
                            {0, 0, 1}};
 
-        float tmp2[3][3] = {{cos(be), 0, -sin(be)},
+        double tmp2[3][3] = {{cos(be), 0, -sin(be)},
                             {0, 1, 0},
                             {sin(be), 0, cos(be)}};
-        float tmp_v[3] = {1, 0, 0};
+        double tmp_v[3] = {1, 0, 0};
 
-        float res_v[3];
-        float res_v2[3];
+        double res_v[3];
+        double res_v2[3];
 
         matrix_vector_mult(tmp2, tmp_v, res_v);
 
@@ -81,8 +84,8 @@ void setup() {
         }
     }
     // Initialize state and covariance
-    float p0[3];
-    float theta0;
+    double p0[3];
+    double theta0;
 
     p0[0] = -3.6287;
     p0[1] = 0.2866;
@@ -90,22 +93,43 @@ void setup() {
     theta0 = 2.7332;
 
     // Initial measurement matrix H0 and initial range measurements r0
-    float H0[3][K];
+    double H0[3][K];
     comp_H0(ka, m, v, p, p0, theta0, H0);
 
-    float r0[3*K];
-
+    double r0[3*K] = {0.057357, 0.080822, 0.012166, 0.0040265, 0.026574, 0.0039414, 0, 0.0068034, 0.001001, 0.27668, 0.3789, 0.38121, 0.00013447, 0.041717, 0.028002, 0, 0.0074713, 0.0039121, 0.013699, 0.0174, 0.058898, 0, 0.011294, 0.01827, 0, 0.0039565, 0.0043419};
+    /*
     for (int k = 0; k < K; k++) {
-        for (int l = 0; l < 3; l++) {
-            r0[3*k + l] = 0;
-            for (int i = 0; i < 3; i++) {
-                r0[3*k + l] += H0[l][k] * P;
+        double eyeK[9] = {0};
+        eyeK[k] = 1;
+
+        //H0 * P
+        double H0P[3][K];
+        for(int i = 0; i < 3; i++) {
+            for (int j = 0; j < K; j++) {
+                H0P[i][j] = 0;
+                for (int l = 0; l < 3; l++) {
+                    H0P[i][j] += H0[i][l] * P;
+                }
             }
         }
-    }
 
-    float xp[6] = {0, 0, 0, 0, 0, 0};
-    float Pp[6][6] = {
+        //H0 * P * eyeK(:, k) = H0 * P * eyeK[k]
+        double H0PeyeK[3];
+        for (int i = 0; i < 3; i++) {
+            H0PeyeK[i] = 0;
+            for (int j = 0; j < K; j++) {
+                H0PeyeK[i] += H0P[i][j] * eyeK[j];
+            }
+        }
+
+        for (int i = 0; i < 3; i++) {
+            r0[3*k + i] = H0PeyeK[i];
+        }
+    }
+    */
+
+    double xp[6] = {0, 0, 0, 0, 0, 0};
+    double Pp[6][6] = {
         {0.01, 0, 0,    0, 0,    0},
         {0,    1, 0,    0, 0,    0},
         {0,    0, 0.01, 0, 0,    0},
@@ -114,19 +138,18 @@ void setup() {
         {0,    0, 0,    0, 0,    1}
     };
 
-    float r[3*K]; // Simulated measurement
-    float Hl[3*K][6]; //Measurement matrix linearization
-    float Kg[6][3*K]; //Kalman gain
-    float xm[6]; //State prediction
-    float Pm[6][6]; //Covariance prediction
-    float rH[3*K];
+    double r[3*K]; // Simulated measurement
+    double Hl[3*K][6]; //Measurement matrix linearization
+    double Kg[6][3*K]; //Kalman gain
+    double xm[6]; //State prediction
+    double Pm[6][6]; //Covariance prediction
+    double rH[3*K];
 
     for (int n = 0; n < nIter; n++) {
         // Simulated measurement noise
         for (int i = 0; i < 3*K; i++) {
             r[i] = r0[i] + si * random(1000)/1000.0;
         }
-
         // State prediction
         state_prediction(A, xp, xm);
 
@@ -139,7 +162,7 @@ void setup() {
         kalmanGain(Hl, Pm, R, Kg); // Kalman gain
 
         // Measurement prediction****************************
-        float a[3] = {xm[0], xm[2], 0};
+        double a[3] = {xm[0], xm[2], 0};
 
         comp_H0(ka, m, v, p, a, xm[4], H0);
 
@@ -151,12 +174,13 @@ void setup() {
 
         state_update(xm, Kg, r, rH, xp); // State update
 
-        cov_update(Kg, Hl, Pm, Pp); // Covariance update
+        cov_update(Kg, Hl, Pm, Pp, R); // Covariance update
+ 
 
         // Output state estimate
         Serial.print("State estimate at iteration ");
         Serial.print(n);
-        Serial.print(": ");
+        Serial.println(": ");
         for (int i = 0; i < 6; i++) {
             Serial.print(xp[i]);
             Serial.print(" ");
@@ -166,5 +190,5 @@ void setup() {
 }
 
 void loop() {
-    // EKF updates in setup(), so no code needed here
+    // Empty loop
 }
