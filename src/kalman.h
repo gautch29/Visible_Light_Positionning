@@ -57,13 +57,62 @@ void cov_update(double Kg[6][3*K], double Hl[3*K][6], double Pm[6][6], double Pp
 void printMatrix(double* mat, int rows, int cols);
 
 // Kalman filter
-void kalmanFilter(double A[6][6], double xp[6], double Pp[6][6], double Q[6][6], double r0[3*K], double R[3*K][3*K], double p[3][K], double v[3][3], double h, double ka, double m, double xm[6], double Pm[6][6], double r[3*K], double H0[3][K]);
+void kalmanFilter(double A[6][6], double xp[6], double Pp[6][6], double Q[6][6], double R[3*K][3*K], double p[3][K], double v[3][3], double h, double ka, double m, double xm[6], double Pm[6][6], double r[3*K], double H0[3][K]);
 
 // Print Kalman results
-void printKalmanResults(double xp[6], int nIter);
+void printKalmanResults(double xp[6]);
 
 // Compute r0
 void r0Comp(double P, double H0[3][K], double r0[3*K]);
 
 // Generate beam vectors
 void beamVectors(double v[3][3], double al[3], double be);
+
+class kalmanFilter{
+    private:
+        double T = 0.01; // Time step
+        double Pp[6][6] = {
+            {0.01, 0, 0,    0, 0,    0},
+            {0,    1, 0,    0, 0,    0},
+            {0,    0, 0.01, 0, 0,    0},
+            {0,    0, 0,    1, 0,    0},
+            {0,    0, 0,    0, 0.01, 0},
+            {0,    0, 0,    0, 0,    1}
+        };
+        double H0[3][K];
+        double r0[3*K];
+        double R[3*K][3*K];
+        double A[6][6] = {
+            {1, T, 0, 0, 0, 0},
+            {0, 1, 0, 0, 0, 0},
+            {0, 0, 1, T, 0, 0},
+            {0, 0, 0, 1, 0, 0},
+            {0, 0, 0, 0, 1, T},
+            {0, 0, 0, 0, 0, 1}
+            };
+        // Process noise covariance
+        double Q[6][6] = {
+            {0.01, 0, 0, 0, 0, 0},
+            {0, 0.01, 0, 0, 0, 0},
+            {0, 0, 0.01, 0, 0, 0},
+            {0, 0, 0, 0.01, 0, 0},
+            {0, 0, 0, 0, 0.01, 0},
+            {0, 0, 0, 0, 0, 0.01}
+            };
+        double p[3][K];
+        double v[3][3];
+        double h;
+        double ka;
+        double m;
+        double xm[6];
+        double Pm[6][6];
+        double r[3*K];
+        double Hl[3*K][6];
+        double Kg[6][3*K];
+        double rH[3*K];
+
+
+    public:
+        double xp[6] = {0, 0, 0, 0, 0, 0};
+        void compute(double h, double ka, double m, double p[3][K], double v[3][3]);
+};

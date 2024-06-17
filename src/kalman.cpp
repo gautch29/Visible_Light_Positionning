@@ -413,7 +413,7 @@ void printMatrix(double* mat, int rows, int cols){
 }
 
 //Kalman filter
-void kalmanFilter(double A[6][6], double xp[6], double Pp[6][6], double Q[6][6], double r0[3*K], double R[3*K][3*K], double p[3][K], double v[3][3], double h, double ka, double m, double xm[6], double Pm[6][6], double r[3*K], double H0[3][K]){
+void kalmanFilter(double A[6][6], double xp[6], double Pp[6][6], double Q[6][6], double R[3*K][3*K], double p[3][K], double v[3][3], double h, double ka, double m, double xm[6], double Pm[6][6], double r[3*K], double H0[3][K]){
     double Kg[6][3*K]; //Kalman gain
     double Hl[3*K][6]; //Measurement matrix linearization
     double rH[3*K]; //Measurement prediction
@@ -446,13 +446,14 @@ void kalmanFilter(double A[6][6], double xp[6], double Pp[6][6], double Q[6][6],
 }
 
 //Print kalman filter results
-void printKalmanResults(double xp[6], int nIter){
+void printKalmanResults(double xp[6]){
     Serial.print("State estimate at iteration ");
-    Serial.print(nIter);
     Serial.print(": ");
     for (int i = 0; i < 6; i++) {
-        Serial.print(xp[i]);
-        Serial.print(" ");
+        if(i%2 == 0){
+            Serial.print(xp[i]);
+            Serial.print(" ");
+        }
     }
     Serial.println();
 }
@@ -507,4 +508,33 @@ void beamVectors(double v[3][3], double al[3], double be){
             v[i][l] = res_v2[i];
         }
     }
+}
+
+
+void kalmanFilter::compute(){
+        // State prediction
+    state_prediction(A, xp, xm);
+
+    // Covariance prediction
+    cov_prediction(A, Pp, Q, Pm);
+
+    // Measurement matrix linearization
+    linear_H0(xm[0], xm[2], xm[4], Hl, p, v, h, ka, m);
+
+    kalmanGain(Hl, Pm, R, Kg); // Kalman gain
+
+    // Measurement prediction****************************
+    double a[3] = {xm[0], xm[2], 0};
+
+    comp_H0(ka, m, v, p, a, xm[4], H0);
+
+    for (int k = 0; k < K; k++) {
+        for (int l = 0; l < 3; l++) {
+            rH[3*k + l] = H0[l][k];
+        }
+    }
+
+    state_update(xm, Kg, r, rH, xp); // State update
+
+    cov_update(Kg, Hl, Pm, Pp, R); // Covariance update
 }
