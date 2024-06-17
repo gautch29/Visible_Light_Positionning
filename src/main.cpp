@@ -6,16 +6,18 @@
 void readInputs();
 
 // System parameters ***************************************************************************************************
-double h = 1;    // Height of the receiver
-double D = 2;    // Distance between reference points
+double h = 0.35;    // Height of the receiver
+double D = 0.5;    // Distance between reference points
 double be = 60 * PI / 180; // Beam elevation angle
 double al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
 double si = sqrt(2.5e-40); // Measurement noise standard deviation
 int nIter = 100; // Number of iterations
 double T = 0.01; // Time step
 double ka = 1; // Placeholder for constant 'ka'
-double m = 1; // Placeholder for constant 'm'
+double m = 2; // Placeholder for constant 'm'
 double P = 1; // Placeholder for constant 'P'
+
+int signalFrequencies[2] = {1000, 2000};
 
 // Kalman filter parameters *******************************************************************************************
 // State transition matrix
@@ -71,19 +73,16 @@ IntervalTimer timerSampling;
 unsigned long last_millis_correlation = 0;
 
 //Sampling variables
-double* signal1;
+double signal[3][SAMPLING_BUFFER_SIZE];
 
 //Variables for correlation
-double* maskSignal1;
-double c1;
-double* maskSignal2;
-double c2;
+double *maskSignal[K];
+double correlations[K][3];
 
 // Main EKF loop
 void setup() {
     Serial.begin(115200);
 
-    signal1 = new double[SAMPLING_BUFFER_SIZE];
     // Initialize measurement noise covariance R
     for (int i = 0; i < 3*K; i++) {
         for (int j = 0; j < 3*K; j++) {
@@ -106,19 +105,21 @@ void setup() {
 
     for (int n = 0; n < nIter; n++) {
         // Simulated measurement noise
-        for (int i = 0; i < 3*K; i++) {
-            r[i] = r0[i] + si * random(1000)/1000.0;
-        }
+        //for (int i = 0; i < 3*K; i++) {
+        //    r[i] = r0[i] + si * random(1000)/1000.0;
+        //}
 
         //Kalman Filter
-        kalmanFilter(A, xp, Pp, Q, r0, R, p, v, h, ka, m, xm, Pm, r, H0);
+        //kalmanFilter(A, xp, Pp, Q, r0, R, p, v, h, ka, m, xm, Pm, r, H0);
  
         // Output state estimate
-        printKalmanResults(xp, n);
+        //printKalmanResults(xp, n);
     }
 
-    maskSignal1 = generateMask(CYCLES_IN_MASK, SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY);
-    maskSignal2 = generateMask(CYCLES_IN_MASK, SAMPLING_FREQUENCY/SIGNAL2_FREQUENCY);
+    //Generate masks
+    for(int i = 0; i < K; i++){
+        maskSignal[i] = generateMask(CYCLES_IN_MASK, SAMPLING_FREQUENCY/signalFrequencies[i]);
+    }
 
     //Setting up the sampling timer
     timerSampling.begin(readInputs, 62);
@@ -129,32 +130,94 @@ void setup() {
 void loop() {
 
     //Correlation
-    if (millis() - last_millis_correlation > 100) {
-        //Correlation
+    if (millis() - last_millis_correlation > 10) {
+        //Update last time
         last_millis_correlation = millis();
-        //Copy signal
-        double* signalCopy = new double[SAMPLING_BUFFER_SIZE];
-        for (int i = 0; i < SAMPLING_BUFFER_SIZE; i++){
-            signalCopy[i] = signal1[i];
+
+        //Copy signal to avoid it changing because of interrupt during computation
+        double signalCopy[3][SAMPLING_BUFFER_SIZE];   
+        for(int i = 0; i<3 ; i++){
+            for (int j = 0; j < SAMPLING_BUFFER_SIZE; j++){
+                signalCopy[i][j] = signal[i][j];
+            }
+        }
+        
+        //Compute correlation
+        //i is the signal, j is the sensor
+        for(int i = 0; i < K; i++){
+            for(int j = 0; j < 3; j++){
+                correlations[i][j] = correlationShift(maskSignal[i], signalCopy[j], CYCLES_IN_MASK * SAMPLING_FREQUENCY/signalFrequencies[i], SAMPLING_FREQUENCY/signalFrequencies[i]);
+            }
         }
 
-        c1 = correlationShift(maskSignal1, signalCopy, CYCLES_IN_MASK * SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY, SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY);
-        c2 = correlationShift(maskSignal2, signalCopy, CYCLES_IN_MASK * SAMPLING_FREQUENCY/SIGNAL2_FREQUENCY, SAMPLING_FREQUENCY/SIGNAL2_FREQUENCY);
+        //Scaling correlation
+        for(int i = 0; i < K; i++){
+            for(int j = 0; j < 3; j++){
+                correlations[i][j] = correlations[i][j]/3;
+            }
+        }
 
-        Serial.print(" Correlation 1 :");
-        Serial.print(c1);
-        Serial.print(" Correlation 2 :");
-        Serial.print (c2);
-        Serial.print(" Signal 1 :");
-        Serial.println(signalCopy[SAMPLING_BUFFER_SIZE - 1]);
+/*
+        Serial.print("Correlation 1: ");
+        Serial.print(correlations[0][0]);
+        Serial.print(" Correlation 2: ");
+        Serial.print(correlations[0][1]);
+        Serial.print(" Correlation 3: ");
+        Serial.print(correlations[0][2]);
+        Serial.print(" Correlation 4: ");
+        Serial.print(correlations[1][0]);
+        Serial.print(" Correlation 5: ");
+        Serial.print(correlations[1][1]);
+        Serial.print(" Correlation 6: ");
+        Serial.print(correlations[1][2]);
+*/
+        /*
+        Serial.print(" Signal 1: ");
+        Serial.print(signalCopy[0][SAMPLING_BUFFER_SIZE - 1]);
+        Serial.print(" Signal 2: ");
+        Serial.print(signalCopy[1][SAMPLING_BUFFER_SIZE - 1]);
+        Serial.print(" Signal 3: ");
+        Serial.print(signalCopy[2][SAMPLING_BUFFER_SIZE - 1]);
+        */
+        Serial.println();
 
-        delete[] signalCopy;
+
+        //Lampe 1
+        //Capteur 1
+            r[0] = correlations[0][0];
+        //Capteur 2
+            r[1] = correlations[0][1];
+        //Capteur 3
+            r[2] = correlations[0][2];
+
+        //Lampe 2
+        //Capteur 1
+            r[3] = correlations[1][0];
+        //Capteur 2
+            r[4] = correlations[1][1];
+        //Capteur 3
+            r[5] = correlations[1][2];
+
+        //Kalman Filter
+        kalmanFilter(A, xp, Pp, Q, R, p, v, h, ka, m, xm, Pm, r, H0);
+ 
+        //Forcing y and theta to 0
+        xp[2] = 0;
+        xp[4] = 0;
+
+        // Output state estimate
+        printKalmanResults(xp);
+
     }
 }
 
 void readInputs(){
     for(int i = 0; i < SAMPLING_BUFFER_SIZE - 1; i++){
-        signal1[i] = signal1[i+1];
+        signal[0][i] = signal[0][i+1];
+        signal[1][i] = signal[1][i+1];
+        signal[2][i] = signal[2][i+1];
     }
-    signal1[SAMPLING_BUFFER_SIZE - 1] = analogRead(A0);
+    signal[0][SAMPLING_BUFFER_SIZE - 1] = analogRead(A0);
+    signal[1][SAMPLING_BUFFER_SIZE - 1] = analogRead(A1);
+    signal[2][SAMPLING_BUFFER_SIZE - 1] = analogRead(A2);
 }
