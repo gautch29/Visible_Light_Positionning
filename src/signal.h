@@ -1,6 +1,5 @@
 #define SAMPLING_FREQUENCY 16000
 #define CYCLES_IN_MASK 10
-
 #define SAMPLING_BUFFER_SIZE 176 //(10+1) * 16 CYCLES_IN_MASK + 1 pour le shifting * SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY
 
 //Gnerate a square signale wit 50% duty cycle and a given periode
