@@ -8,12 +8,12 @@ void printCorrelations();
 
 // System parameters ***************************************************************************************************
 double h = 0.35;    // Height of the receiver
-double D = 0.4;    // Distance between reference points
+double D = 0.415;    // Distance between reference points
 double be = 60 * PI / 180; // Beam elevation angle
 double al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
 double p0[3] = {0,0,0};
 double theta0 = 0;
-double ka = 5.46; // Placeholder for constant 'ka'
+double ka = 1.7;//5.46; // Placeholder for constant 'ka'
 double m = 2; // Placeholder for constant 'm'
 double P = 1; // Placeholder for constant 'P'
 double p[3][K] = { // Reference point positions
@@ -39,8 +39,8 @@ KalmanFilter kF = KalmanFilter(p0, theta0, P, al, be, ka, m, h, p);
 unsigned long last_millis_ekf = 0;
 
 //Loop timing **********************************************************************************************************
-int EKF_period = 10; //Period of the EKF in ms
-int correlation_period = 10; //Period of the correlation in ms
+unsigned long EKF_period = 10; //Period of the EKF in ms
+unsigned long correlation_period = 10; //Period of the correlation in ms
 
 void setup() {
     Serial.begin(115200);
