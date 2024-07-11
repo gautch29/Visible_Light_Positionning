@@ -77,7 +77,7 @@ void loop() {
                 correlations[i][j] = correlationShift(maskSignal[i], signalCopy[j], CYCLES_IN_MASK * SAMPLING_FREQUENCY/signalFrequencies[i], SAMPLING_FREQUENCY/signalFrequencies[i]);
             }
         }
-
+        //Serial.println(correlations[0][0]);
         //printCorrelations(); //Print correlations
     }
 

@@ -98,7 +98,7 @@ class KalmanFilter{
     KalmanFilter(double p0[3], double theta, double P, double al[3], double be, double ka, double m, double h, double p[3][K]){
         for (int i = 0; i < 3*K; i++) {
             for (int j = 0; j < 3*K; j++) {
-                R[i][j] = (i == j) ? 0.01 : 0;
+                R[i][j] = (i == j) ? 0.29 : 0;
             }
         }
         comp_H0(p0, theta);
