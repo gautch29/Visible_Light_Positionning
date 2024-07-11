@@ -1,7 +1,9 @@
 #include <math.h>
 #include <Arduino.h>
+#include <ADC.h>
 #include "kalmanFilter.h"
 #include "signal.h"
+
 
 void readInputs();
 void printCorrelations();
@@ -28,6 +30,9 @@ int signalFrequencies[K] = {1000, 2000, 4000, 8000};
 double signal[3][SAMPLING_BUFFER_SIZE]; //Buffer for the signal
 IntervalTimer timerSampling; //Timer for sampling
 
+int indexSample = 0;
+ADC *adc = new ADC(); // adc object;
+
 //Correlation variables ************************************************************************************************
 double *maskSignal[K];
 double correlations[K][3];
@@ -39,11 +44,20 @@ KalmanFilter kF = KalmanFilter(p0, theta0, P, al, be, ka, m, h, p);
 unsigned long last_millis_ekf = 0;
 
 //Loop timing **********************************************************************************************************
-unsigned long EKF_period = 10; //Period of the EKF in ms
-unsigned long correlation_period = 10; //Period of the correlation in ms
+unsigned long EKF_period = 20; //Period of the EKF in ms
+unsigned long correlation_period = 20; //Period of the correlation in ms
 
 void setup() {
     Serial.begin(115200);
+
+    //Setting up ADC for real fast reading
+    adc->adc0->setAveraging(1);
+    adc->adc0->setResolution(10);
+    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED);
+    adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED);
+    pinMode(A0, INPUT);
+    pinMode(A1, INPUT);
+    pinMode(A2, INPUT);
 
     //Generate correlation masks
     for(int i = 0; i < K; i++){
@@ -51,8 +65,8 @@ void setup() {
     }
 
     //Setting up the sampling timer
-    timerSampling.begin(readInputs, 1000000/SAMPLING_FREQUENCY);
-    timerSampling.priority(0);
+    //timerSampling.begin(readInputs, 1000000/SAMPLING_FREQUENCY);
+    //timerSampling.priority(0);
 
 }
 
@@ -78,7 +92,8 @@ void loop() {
             }
         }
         //Serial.println(correlations[0][0]);
-        //printCorrelations(); //Print correlations
+        printCorrelations(); //Print correlations
+
     }
 
     //EKF
@@ -96,21 +111,19 @@ void loop() {
         //kF.xp[2] = 0;
         //kF.xp[4] = 0;
 
-        kF.print();
+        //kF.print();
     }
 }
 
 void readInputs(){
-    //Shift the buffer
-    for(int i = 0; i < SAMPLING_BUFFER_SIZE - 1; i++){
-        signal[0][i] = signal[0][i+1];
-        signal[1][i] = signal[1][i+1];
-        signal[2][i] = signal[2][i+1];
-    }
     //Read the new values
-    signal[0][SAMPLING_BUFFER_SIZE - 1] = analogRead(A0);
-    signal[1][SAMPLING_BUFFER_SIZE - 1] = analogRead(A1);
-    signal[2][SAMPLING_BUFFER_SIZE - 1] = analogRead(A2);
+    signal[0][indexSample] = adc->adc0->analogRead(A0);//analogRead(A0);
+    signal[1][indexSample] = adc->adc0->analogRead(A1);//analogRead(A1);
+    signal[2][indexSample] = adc->adc0->analogRead(A2);//analogRead(A2);
+
+    //Shift Index
+    indexSample++;
+    if(indexSample >= SAMPLING_BUFFER_SIZE - 1) indexSample = 0;
 }
 
 void printCorrelations(){
