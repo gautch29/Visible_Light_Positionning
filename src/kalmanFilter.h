@@ -37,7 +37,7 @@ void printMatrix(double* mat, int rows, int cols);
 
 class KalmanFilter{
     private:
-        double T = 0.01; // Time step
+        double T = 0.05; // Time step
         double Pp[6][6] = {
             {0.01, 0, 0,    0, 0,    0},
             {0,    1, 0,    0, 0,    0},
@@ -93,6 +93,7 @@ class KalmanFilter{
         void compute();
         void updateMeasurements(double r[3*K]);
         void print();
+        void setT(double T);
 
     //Constructor
     KalmanFilter(double p0[3], double theta, double P, double al[3], double be, double ka, double m, double h, double p[3][K]){

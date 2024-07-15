@@ -527,3 +527,10 @@ void KalmanFilter::print(){
     }
     Serial.println();
 }
+
+void KalmanFilter::setT(double timeStep){
+    T = timeStep;
+    A[0][1] = timeStep;
+    A[2][3] = timeStep;
+    A[4][5] = timeStep;
+}
