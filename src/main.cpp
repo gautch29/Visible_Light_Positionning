@@ -6,6 +6,8 @@
 
 void readInputs();
 void printCorrelations();
+void printCorrelations(int led);
+void printCorrelations(int led, int diode);
 void printSignals();
 
 // System parameters ***************************************************************************************************
@@ -23,12 +25,15 @@ double al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
 double p0[3] = {0,0,0}; // Initial position guess
 double theta0 = 0; // Initial angle guess
 
-double ka = 1.7;//5.46; // Placeholder for constant 'ka'
-double m = 2; // Placeholder for constant 'm'
+double ka = 2.628;//5.46; // Placeholder for constant 'ka'
+double m = 1.5; // Placeholder for constant 'm'
 double P = 1; // Placeholder for constant 'P'
 
 
-int signalFrequencies[K] = {1000, 2000, 4000, 8000};
+int signalFrequencies[K] = {500, 1000, 2000, 4000};
+int samplingFrequency = 40000; //Sampling frequency
+
+double correlationCompensationFactor[K][3] = {{46.0f/90, 46.0f/160, 46.0f/105}, {46.0f/145, 46.0f/115, 46.0f/92}, {46.0f/75, 46.0f/110, 46.0f/110}, {46.0f/65, 46.0f/57, 46.0f/70}};//{1, 1, 11.0/5.0, 11.0/8.0}; 
 
 //Sampling variables ***************************************************************************************************
 int signal[3][SAMPLING_BUFFER_SIZE]; //Buffer for the signal
@@ -38,6 +43,8 @@ int indexSample = 0; //Index of the current sample in the rolling buffer
 
 //Correlation variables ************************************************************************************************
 int *maskSignal[K];
+int maskLength[K];
+int periodeLength[K];
 double correlations[K][3];
 unsigned long last_millis_correlation = 0;
 
@@ -54,11 +61,28 @@ void setup() {
 
     //Generate correlation masks
     for(int i = 0; i < K; i++){
-        maskSignal[i] = generateMask(CYCLES_IN_MASK, SAMPLING_FREQUENCY/signalFrequencies[i]);
+        int ceiling =  (samplingFrequency + signalFrequencies[i] - 1) / signalFrequencies[i]; //Ceiling of samplingFrequency/signalFrequency
+        maskSignal[i] = generateMask(CYCLES_IN_MASK, ceiling);
+        maskLength[i] = CYCLES_IN_MASK * ceiling;
+        periodeLength[i] = ceiling;
     }
+    maskSignal[0] = generateMask(5, 80);
+    maskLength[0] = 5 * 80;
+    periodeLength[0] = 80;
+
+
+    /*int paternmask3[20] = {1, 1, 1, 1, 1, 1, 0, -1, -1, -1, -1, -1, -1, 0, 1, 1, 1, 1, 1, 1};
+
+    for(int i = 0;i < 7;i++){
+        for(int j = 0;j < 20;j++){
+            if(i%2 == 0) maskSignal[2][i*20 + j] = paternmask3[j];
+            else maskSignal[2][i*20 + j] = -paternmask3[j];
+        }
+    }
+    */
 
     //Setting up the sampling timer
-    timerSampling.begin(readInputs, 1000000/SAMPLING_FREQUENCY);
+    timerSampling.begin(readInputs, 1000000/samplingFrequency);
     timerSampling.priority(0);
 
 }
@@ -76,21 +100,27 @@ void loop() {
         //(i is the signal, j is the sensor)
         for(int i = 0; i < K; i++){
             for(int j = 0; j < 3; j++){
-                correlations[i][j] = correlationShift(maskSignal[i], signal[j], CYCLES_IN_MASK * SAMPLING_FREQUENCY/signalFrequencies[i], SAMPLING_FREQUENCY/signalFrequencies[i], indexSample);
+                correlations[i][j] = correlationShift(maskSignal[i], signal[j], maskLength[i], periodeLength[i], indexSample);
+                correlations[i][j] *= correlationCompensationFactor[i][j];
             }
         }
-        //printCorrelations();   
+
+        //printCorrelations();
         
         //EKF **********************************************************************************************************
 
-        double r[3*K] = {correlations[0][0], correlations[0][1], correlations[0][2], correlations[1][0], correlations[1][1], correlations[1][2], correlations[2][0], correlations[2][1], correlations[2][2], correlations[3][0], correlations[3][1], correlations[3][2]};
+        double r[3*K] = {correlations[0][0], correlations[0][1], correlations[0][2],
+                         correlations[1][0], correlations[1][1], correlations[1][2],
+                         correlations[2][0], correlations[2][1], correlations[2][2],
+                         correlations[3][0], correlations[3][1], correlations[3][2]};
         kF.updateMeasurements(r);
         kF.compute();
+        kF.xp[4] = 0;
         kF.print();
 
         //End EKF ******************************************************************************************************
         
-        timerSampling.begin(readInputs, 1000000/SAMPLING_FREQUENCY); //Start sampling again
+        timerSampling.begin(readInputs, 1000000/samplingFrequency); //Start sampling again
     }
 }
 
@@ -113,6 +143,18 @@ void printCorrelations(){
         }
     }
     Serial.println();
+}
+
+void printCorrelations(int led){
+    for(int j = 0; j < 3; j++){
+        Serial.print(correlations[led][j]);
+        Serial.print(" ");
+    }
+    Serial.println();
+}
+
+void printCorrelations(int led, int diode){
+    Serial.println(correlations[led][diode]);
 }
 
 void printSignals(){

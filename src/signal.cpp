@@ -51,7 +51,7 @@ double correlationShift(int* mask, int* signal, int length, int max_shift, int s
 }
 
 void setupADC(ADC* adc){
-    adc->adc0->setAveraging(1); // no averaging
+    adc->adc0->setAveraging(4); // no averaging
     adc->adc0->setResolution(10); // 10 bits resolution
     adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED); // fastest conversion
     adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED); // fastest sampling

@@ -1,8 +1,7 @@
 #include <ADC.h>
 
-#define SAMPLING_FREQUENCY 200000
-#define CYCLES_IN_MASK 2
-#define SAMPLING_BUFFER_SIZE 600 //(2 + 1) * 200 CYCLES_IN_MASK + 1 pour le shifting * SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY
+#define CYCLES_IN_MASK 5
+#define SAMPLING_BUFFER_SIZE 480 //(10 + 1) * 200 CYCLES_IN_MASK + 1 pour le shifting * SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY
 
 //Lowest signal frequency = 1kHz -> longest cycles is 200 samples
 
