@@ -62,7 +62,7 @@ void setup() {
     //Generate correlation masks
     for(int i = 0; i < K; i++){
         double periodeSize = (double)samplingFrequency/(double)signalFrequencies[i];
-        maskLength[i] = SAMPLING_BUFFER_SIZE - 80;
+        maskLength[i] = SAMPLING_BUFFER_SIZE - MAXIMUM_SHIFT;
         maskSignal[i] = generateMask(maskLength[i], periodeSize);
     }
 
@@ -85,7 +85,7 @@ void loop() {
         for(int i = 0; i < K; i++){
             for(int j = 0; j < 3; j++){
                 //Print signal and mask
-                correlations[i][j] = correlationShift(maskSignal[i], signal[j], maskLength[i], 80, indexSample);
+                correlations[i][j] = correlationShift(maskSignal[i], signal[j], maskLength[i], MAXIMUM_SHIFT, indexSample);
                 correlations[i][j] *= correlationCompensationFactor[i][j];
             }
         }

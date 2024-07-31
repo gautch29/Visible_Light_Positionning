@@ -2,6 +2,7 @@
 
 #define CYCLES_IN_MASK 5
 #define SAMPLING_BUFFER_SIZE 480 //(10 + 1) * 200 CYCLES_IN_MASK + 1 pour le shifting * SAMPLING_FREQUENCY/SIGNAL1_FREQUENCY
+#define MAXIMUM_SHIFT 80 //Maximum length of a peridoe in samples
 
 //Lowest signal frequency = 1kHz -> longest cycles is 200 samples
 
