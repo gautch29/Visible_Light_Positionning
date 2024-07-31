@@ -25,7 +25,7 @@ double al[3] = {0, 120 * PI / 180, -120 * PI / 180}; // Beam azimuth angles
 double p0[3] = {0,0,0}; // Initial position guess
 double theta0 = 0; // Initial angle guess
 
-double ka = 2.178;//5.46; // Placeholder for constant 'ka'
+double ka = 2.178; // Placeholder for constant 'ka'
 double m = 1; // Placeholder for constant 'm'
 double P = 1; // Placeholder for constant 'P'
 
@@ -33,13 +33,12 @@ double P = 1; // Placeholder for constant 'P'
 int signalFrequencies[K] = {500, 1000, 2000, 1500};
 int samplingFrequency = 40000; //Sampling frequency
 
-//double correlationCompensationFactor[K][3] = {{46.0f/90, 46.0f/160, 46.0f/105}, {46.0f/145, 46.0f/115, 46.0f/92}, {46.0f/75, 46.0f/110, 46.0f/110}, {46.0f/65, 46.0f/57, 46.0f/70}};//{1, 1, 11.0/5.0, 11.0/8.0}; 
 double correlationCompensationFactor[K][3] = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
 
 //Sampling variables ***************************************************************************************************
 int signal[3][SAMPLING_BUFFER_SIZE]; //Buffer for the signal
 IntervalTimer timerSampling; //Timer for sampling
-ADC *adc = new ADC(); // adc object;
+ADC *adc = new ADC(); // adc object
 int indexSample = 0; //Index of the current sample in the rolling buffer
 
 //Correlation variables ************************************************************************************************

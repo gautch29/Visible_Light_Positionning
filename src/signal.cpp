@@ -15,6 +15,7 @@ double correlation(double* mask, int* signal, int length, int shift, int signalI
     double sum = 0;
     double maskMean = 0;
     double signalMean = 0;
+
     for (int i = 0; i < length; i++){
         maskMean += mask[i];
     }
@@ -26,7 +27,7 @@ double correlation(double* mask, int* signal, int length, int shift, int signalI
 
     for (int i = 0; i < length; i++){
         double maskValue = (double)mask[i] - maskMean;
-        int index = (((i + signalIndex + 1) % SAMPLING_BUFFER_SIZE) + shift) % length;
+        int index = (((i + signalIndex + 1) % SAMPLING_BUFFER_SIZE) + shift) % SAMPLING_BUFFER_SIZE;
         double signalValue = (double)signal[index] - signalMean;
         sum += maskValue * signalValue;
     }
