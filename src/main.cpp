@@ -1,3 +1,4 @@
+//Main file for Visual Light Positioning System
 #include <math.h>
 #include <Arduino.h>
 #include <ADC.h>
